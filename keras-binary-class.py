@@ -20,27 +20,30 @@ from sklearn.preprocessing import MinMaxScaler
 
 import os
 import sys
+import math
+
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'  # suppress CPU msg
 
 # load dataset
 dataframe = read_csv(os.path.join(sys.path[0], "processed.csv"), delim_whitespace=False, header=0)
-dataframe = dataframe.drop(columns=["CLOSINGPIPS"], axis=1)
+dataframe = dataframe[ abs(dataframe["CLOSINGPIPS"]) > 0.002 ]
 
-#dataframe = dataframe.tail(1000)
+y = dataframe["CLOSINGPIPS"].to_numpy()
+dataframe = dataframe.drop(["CLOSINGPIPS"], axis=1)
 
-y = np_utils.to_categorical(dataframe["TYPE"], num_classes=2)
-dataframe = dataframe.drop(["TYPE"], axis=1)
+output_classes = 2
+binner = KBinsDiscretizer(n_bins=output_classes, encode='ordinal' )
+y = y.reshape(-1, 1)
+y_bin = binner.fit_transform(y)
+y_categorical = np_utils.to_categorical(y_bin, num_classes=output_classes)
 
-# data normalization with sklearn
+#scaler = MinMaxScaler()
+#dataframe = scaler.fit_transform(dataframe)
 
-scaler = MinMaxScaler()
-dataframe = scaler.fit_transform(dataframe)
+binner = KBinsDiscretizer(n_bins=30, encode='ordinal', strategy='uniform')
+dataframe = binner.fit_transform(dataframe)
 
-#binner = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy='uniform')
-#dataframe = binner.fit_transform(dataframe)
-#fwd = binner.fit_transform(fwd)
-
-X_train, X_test, y_train, y_test = train_test_split(dataframe, y, test_size=0.3, shuffle=True)
+X_train, X_test, y_train, y_test = train_test_split(dataframe, y_categorical, test_size=0.3, shuffle=True)
 
 class log(K.callbacks.Callback):
   def __init__(self, n):
@@ -49,22 +52,21 @@ class log(K.callbacks.Callback):
   def on_epoch_end(self, epoch, logs={}):
     if epoch % self.n == 0:
       curr_loss =logs.get('loss')
-      curr_acc = logs.get('binary_accuracy') * 100
+      curr_acc = logs.get('accuracy') * 100
       print("epoch = %4d loss = %0.6f accuracy = %0.2f%%" % \
         (epoch, curr_loss, curr_acc))
 
-max_epochs = 1000
+max_epochs = 2000
 batch_size = 5
 my_logger = log(n=5)
 
 my_init = K.initializers.glorot_uniform(seed=1)
 model = K.models.Sequential()
 
-model.add(K.layers.Dense(units = 25, input_dim = 25, activation='relu'))  
-model.add(K.layers.Dense(units = 10, activation='relu'))  
-model.add(K.layers.Dense(units = 2, activation='sigmoid'))
+model.add(K.layers.Dense(units = 54, input_dim = 54, activation='relu'))
+model.add(K.layers.Dense(units = output_classes, activation='softmax'))
 simple_sgd = K.optimizers.Adam()
-model.compile(loss='binary_crossentropy', optimizer=simple_sgd, metrics=['binary_accuracy'])  
+model.compile(loss='categorical_crossentropy', optimizer=simple_sgd, metrics=['accuracy'])  
 
 h = model.fit(X_train
             , y_train

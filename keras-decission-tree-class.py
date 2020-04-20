@@ -23,25 +23,16 @@ import sys
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'  # suppress CPU msg
 
 # load dataset
-dataframe = read_csv(os.path.join(sys.path[0], "processed.csv"), delim_whitespace=False, header=0)
+dataframe = read_csv(os.path.join(sys.path[0], "candle_data_out_normalize_2.csv"), delim_whitespace=False, header=0)
 dataframe = dataframe.drop(columns=["CLOSINGPIPS"], axis=1)
-dataframe = dataframe.tail(1000)
 
-total = dataframe.shape[0]
-fwd   = dataframe[total-100:total]
-dataframe = dataframe[1:total-100]
 
-y = np_utils.to_categorical(dataframe["TYPE"], num_classes=3)
-y_fwd = np_utils.to_categorical(fwd["TYPE"], num_classes=3)
-
-dataframe = dataframe.drop(["TYPE"], axis=1)
-fwd = fwd.drop(["TYPE"], axis=1)
-
+y = np_utils.to_categorical(dataframe["RESULT"], num_classes=2)
+dataframe = dataframe.drop(["RESULT"], axis=1)
 # demonstrate data normalization with sklearn
 
 scaler = MinMaxScaler()
 dataframe = scaler.fit_transform(dataframe)
-fwd = scaler.fit_transform(fwd)
 
 #binner = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy='uniform')
 #dataframe = binner.fit_transform(dataframe)
@@ -65,11 +56,10 @@ clf = DecisionTreeClassifier()
 # Train Decision Tree Classifer
 h = clf.fit(X_train,y_train)
 
-print(h)
+##print(h)
+y_pred = clf.predict(X_test)
 
-y_pred = clf.predict(fwd)
-
-print("Accuracy:",metrics.accuracy_score(y_fwd, y_pred))
+#print("Accuracy:",metrics.accuracy_score(y_fwd, y_pred))
 
 # Generate predictions (probabilities -- the output of the last layer)
 # on new data using `predict`
@@ -89,5 +79,5 @@ print("Accuracy:",metrics.accuracy_score(y_fwd, y_pred))
 #print('Test loss:', results[0])
 #print('Test accuracy:', results[1])
 
-matrix = confusion_matrix(y_fwd.argmax(axis=1), y_pred.argmax(axis=1))
+matrix = confusion_matrix(y_test.argmax(axis=1), y_pred.argmax(axis=1))
 print(matrix)
