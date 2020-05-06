@@ -3,9 +3,13 @@ import tensorflow as tf
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+
+
 import os
 import sys
 import pandas as pd
+
+from sklearn.preprocessing import MinMaxScaler
 
 mpl.rcParams['figure.figsize'] = (8, 6)
 mpl.rcParams['axes.grid'] = False
@@ -13,22 +17,25 @@ mpl.rcParams['axes.grid'] = False
 df = pd.read_csv(os.path.join(sys.path[0], "processed.csv"), delim_whitespace=False, header=0)
 
 tf.random.set_seed(13)
-TRAIN_SPLIT = 11000
+TRAIN_SPLIT = 15000
 
-past_history = 500
-future_target = 24
+past_history = 5
+future_target = 1
 STEP = 6
 
-BATCH_SIZE = 64
-BUFFER_SIZE = 1000
+BATCH_SIZE = 1500
+BUFFER_SIZE = 3500
 
 EVALUATION_INTERVAL = 100
-EPOCHS = 40
+EPOCHS = 10
 
-features_considered = ["OPEN","CLOSE","HIGH","LOW","UP","BODY","DOWN"]
+features_considered = ["OPENASKVOL","OPENBIDVOL","MACD_1","SIGNAL_1","HIST_1","ATR_1","BB_LOW_1","BB_MID_1","BB_UP_1","ADX_1","RSI_1","SRSI_K1","SRSI_D1","MA_1","WILLR_1","AVGPRICE_1","MEDPRICE_1","TYPPRICE_1","WCLPRICE_1","MA20","MA14","MA20_1","MA14_1","MA20_2","MA14_2","MA20_3","MA14_3"]
+ix = df['INIT']
 
-features = df[features_considered]
-features.index = df['INIT']
+scaler = MinMaxScaler()
+scaled = scaler.fit_transform(df[features_considered])
+features =  pd.DataFrame(data=scaled)
+features.index = ix
 features.head()
 
 features.plot(subplots=True)
@@ -64,6 +71,7 @@ x_train_single, y_train_single = multivariate_data(dataset, dataset[:, 1], 0,
                                                    TRAIN_SPLIT, past_history,
                                                    future_target, STEP,
                                                    single_step=True)
+
 x_val_single, y_val_single = multivariate_data(dataset, dataset[:, 1],
                                                TRAIN_SPLIT, None, past_history,
                                                future_target, STEP,
@@ -132,7 +140,7 @@ def plot_train_history(history, title):
 plot_train_history(single_step_history,
                    'Single Step Training and validation loss')
 
-for x, y in val_data_single.take(10):
+for x, y in val_data_single.take(20):
   plot = show_plot([x[0][:, 1].numpy(), y[0].numpy(),
                     single_step_model.predict(x)[0]], 12,
                    'Single Step Prediction')

@@ -26,22 +26,23 @@ os.environ['TF_CPP_MIN_LOG_LEVEL']='2'  # suppress CPU msg
 
 # load dataset
 dataframe = read_csv(os.path.join(sys.path[0], "processed.csv"), delim_whitespace=False, header=0)
-dataframe = dataframe[ abs(dataframe["CLOSINGPIPS"]) > 0.002 ]
+#dataframe = dataframe[ abs(dataframe["CLOSINGPIPS"]) > 0.002 ]
 
-y = dataframe["CLOSINGPIPS"].to_numpy()
-dataframe = dataframe.drop(["CLOSINGPIPS"], axis=1)
+#y = dataframe["CLOSINGPIPS"].to_numpy()
+#dataframe = dataframe.drop(["CLOSINGPIPS"], axis=1)
 
-output_classes = 2
-binner = KBinsDiscretizer(n_bins=output_classes, encode='ordinal' )
-y = y.reshape(-1, 1)
-y_bin = binner.fit_transform(y)
-y_categorical = np_utils.to_categorical(y_bin, num_classes=output_classes)
+##output_classes = 2
+#binner = KBinsDiscretizer(n_bins=output_classes, encode='ordinal' )
+#y = y.reshape(-1, 1)
+#y_bin = binner.fit_transform(y)
+y_categorical = np_utils.to_categorical(dataframe["SIGNAL"], num_classes=2)
+dataframe = dataframe.drop(["SIGNAL"], axis=1)
 
-#scaler = MinMaxScaler()
-#dataframe = scaler.fit_transform(dataframe)
+scaler = MinMaxScaler()
+dataframe = scaler.fit_transform(dataframe)
 
-binner = KBinsDiscretizer(n_bins=30, encode='ordinal', strategy='uniform')
-dataframe = binner.fit_transform(dataframe)
+#binner = KBinsDiscretizer(n_bins=30, encode='ordinal', strategy='uniform')
+#dataframe = binner.fit_transform(dataframe)
 
 X_train, X_test, y_train, y_test = train_test_split(dataframe, y_categorical, test_size=0.3, shuffle=True)
 
@@ -56,17 +57,30 @@ class log(K.callbacks.Callback):
       print("epoch = %4d loss = %0.6f accuracy = %0.2f%%" % \
         (epoch, curr_loss, curr_acc))
 
-max_epochs = 2000
+max_epochs = 50
 batch_size = 5
 my_logger = log(n=5)
 
 my_init = K.initializers.glorot_uniform(seed=1)
 model = K.models.Sequential()
 
-model.add(K.layers.Dense(units = 54, input_dim = 54, activation='relu'))
-model.add(K.layers.Dense(units = output_classes, activation='softmax'))
-simple_sgd = K.optimizers.Adam()
-model.compile(loss='categorical_crossentropy', optimizer=simple_sgd, metrics=['accuracy'])  
+# model.add(K.layers.Dense(units = 28, input_dim = 28, activation='tanh'))
+# model.add(K.layers.Dense(units = 2, activation='tanh'))
+# simple_sgd = K.optimizers.Adam()
+
+model.add(Dense(1, input_shape=(1,), activation='tanh'))
+model.add(Dense(3, activation='tanh'))
+model.add(Dense(3, activation='tanh'))
+model.add(Dense(3, activation='tanh'))
+model.add(Dense(1, activation='tanh'))
+
+#model.compile(loss='categorical_crossentropy', optimizer=simple_sgd, metrics=['accuracy'])  
+
+model.compile(
+                optimizer='rmsprop',
+                loss='hinge',
+                metrics=['accuracy']
+                )
 
 h = model.fit(X_train
             , y_train

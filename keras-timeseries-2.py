@@ -6,6 +6,7 @@ import numpy as np
 import os
 import sys
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 mpl.rcParams['figure.figsize'] = (8, 6)
 mpl.rcParams['axes.grid'] = False
@@ -13,22 +14,27 @@ mpl.rcParams['axes.grid'] = False
 df = pd.read_csv(os.path.join(sys.path[0], "processed.csv"), delim_whitespace=False, header=0)
 
 tf.random.set_seed(13)
-TRAIN_SPLIT = 12000
+TRAIN_SPLIT = 15000
 
-past_history = 350
-future_target = 10
+past_history = 2000
+future_target = 50
 STEP = 5
-
+  
 EVALUATION_INTERVAL = 200
 EPOCHS = 20
 
-BATCH_SIZE = 500
-BUFFER_SIZE = 100
+BATCH_SIZE = 2000
+BUFFER_SIZE = 500
 
-features_considered = ["OPEN","CLOSE","HIGH","LOW","UP","BODY","DOWN"]
+features_considered = ["OPENASKVOL","OPENBIDVOL","MACD_1","SIGNAL_1","HIST_1","ATR_1","BB_LOW_1","BB_MID_1","BB_UP_1","ADX_1","RSI_1","SRSI_K1","SRSI_D1","MA_1","WILLR_1","AVGPRICE_1","MEDPRICE_1","TYPPRICE_1","WCLPRICE_1","MA20","MA14","MA20_1","MA14_1","MA20_2","MA14_2","MA20_3","MA14_3"]
+ix = df['INIT']
 
-features = df[features_considered]
-features.index = df['INIT']
+df = df.drop(columns=["INIT"], axis=1)
+
+scaler = MinMaxScaler()
+scaled = scaler.fit_transform(df[features_considered])
+features =  pd.DataFrame(data=scaled)
+features.index = ix
 features.head()
 
 features.plot(subplots=True)
@@ -99,7 +105,7 @@ def plot_train_history(history, title):
   plt.show()
 
 
-x_train_multi, y_train_multi = multivariate_data(dataset, dataset[:, 1], 0,
+x_train_multi, y_train_multi = multivariate_data(dataset, dataset[:, 0], 0,
                                                  TRAIN_SPLIT, past_history,
                                                  future_target, STEP)
 x_val_multi, y_val_multi = multivariate_data(dataset, dataset[:, 1],
